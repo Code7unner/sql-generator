@@ -12,19 +12,36 @@ func main()  {
 	startGenerationTime := time.Now().Unix()
 
 	db, err := db2.InitDatabase()
-	if err != nil {
-		panic(err)
-	}
+	errorHandler(err)
 	defer db.DB.Close()
 
 	err = db.CreateTablesQuery()
-	if err != nil {
-		panic(err)
-	}
+	errorHandler(err)
 
 	categories, users, messages := gen.Generate()
 
 	endGenerationTime := time.Now().Unix()
 
 	log.Printf("Generation data: %d seconds" , endGenerationTime - startGenerationTime)
+
+	startInsertingTime := time.Now().Unix()
+
+	err = db.InsertUsers(users)
+	errorHandler(err)
+
+	err = db.InsertCategories(categories)
+	errorHandler(err)
+
+	err = db.InsertMessages(messages)
+	errorHandler(err)
+
+	endInsertingTime := time.Now().Unix()
+
+	log.Printf("Inserting data: %d seconds", endInsertingTime - startInsertingTime)
+}
+
+func errorHandler(err error) {
+	if err != nil {
+		panic(err)
+	}
 }

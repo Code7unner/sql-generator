@@ -1,9 +1,9 @@
 package gen
 
 import (
+	"github.com/brianvoe/gofakeit"
 	"math/rand"
 	"time"
-	"github.com/brianvoe/gofakeit"
 )
 
 const (
@@ -28,7 +28,7 @@ func generateCategories() ([]Category, []string) {
 			Name: gofakeit.Company(),
 		}
 
-		if i == 0 {	c.ParentId = c.Id } else { c.Id = categoryIds[len(categoryIds) - 1] }
+		c.ParentId = c.Id
 
 		categoryIds = append(categoryIds, c.Id)
 		categories = append(categories, c)
