@@ -2,11 +2,9 @@ package db
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/joho/godotenv"
 	"log"
 	"os"
-	"sync"
 )
 
 const (
@@ -44,19 +42,10 @@ const (
 		ALTER TABLE public.categories SET (autovacuum_enabled = false);
 		ALTER TABLE public.messages SET (autovacuum_enabled = false);
 	`
-	gophers = 10
 )
-
-var wg sync.WaitGroup
 
 type Postgres struct {
 	DB *sql.DB
-}
-
-type Config struct {
-	dbUser string
-	dbPass string
-	dbName string
 }
 
 func InitDatabase() (*Postgres, error) {
@@ -65,14 +54,7 @@ func InitDatabase() (*Postgres, error) {
 		log.Fatal("Error loading .env file")
 	}
 
-	c := Config{
-		dbUser : os.Getenv("db_user"),
-		dbPass : os.Getenv("db_pass"),
-		dbName : os.Getenv("db_name"),
-	}
-
-	psqlInfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable",
-		c.dbUser, c.dbPass, c.dbName)
+	psqlInfo := os.Getenv("db_info")
 
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
