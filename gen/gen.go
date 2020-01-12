@@ -2,7 +2,10 @@ package gen
 
 import (
 	"github.com/brianvoe/gofakeit"
+	"log"
 	"math/rand"
+	"sql-generator/db"
+	"sync"
 	"time"
 )
 
@@ -12,29 +15,60 @@ const (
 	USERS_COUNT = 500000
 )
 
+var (
+	users 		[]*User
+	messages 	[]*Message
+	categories  []*Category
+)
+
+type Gen struct {
+	p *db.Postgres
+	mu *sync.Mutex
+	wg *sync.WaitGroup
+}
+
+func InitGenerator(p *db.Postgres) (*Gen, error) {
+	return &Gen{
+		p: p,
+		mu: &sync.Mutex{},
+		wg: &sync.WaitGroup{},
+	}, nil
+}
+
+func (g *Gen) Generate() {
+	gofakeit.Seed(time.Now().UnixNano())
+
+	g.generateCategories()
+	log.Printf("Successfully created %v categories.\n", len(categories))
+
+	g.generateUsers()
+	log.Printf("Successfully created %v users.\n", len(users))
+
+	g.generateMessages()
+	log.Printf("Successfully created %v messages.\n", len(messages))
+}
+
 type Category struct {
 	Id       string
 	Name     string
 	ParentId string
 }
 
-func generateCategories() ([]Category, []string) {
-	var categoryIds []string
-	var categories []Category
-
-	for i := 0; i < CATEGORIES_COUNT; i++ {
-		c := Category{
-			Id: gofakeit.UUID(),
-			Name: gofakeit.Company(),
-		}
-
-		c.ParentId = c.Id
-
-		categoryIds = append(categoryIds, c.Id)
+func (g *Gen) generateCategories() {
+	for i := 0; i < CATEGORIES_COUNT; i ++ {
+		c := g.generateCategory()
 		categories = append(categories, c)
 	}
+}
 
-	return categories, categoryIds
+func (g *Gen) generateCategory() *Category {
+	category :=  &Category{
+		Id: gofakeit.UUID(),
+		Name: gofakeit.Company(),
+	}
+	category.ParentId = category.Id
+
+	return category
 }
 
 type User struct {
@@ -42,55 +76,48 @@ type User struct {
 	Name string
 }
 
-func generateUsers() ([]User, []string) {
-	var userIds []string
-	var users []User
-
+func (g *Gen) generateUsers() {
 	for i := 0; i < USERS_COUNT; i++ {
-		user := User{
-			Id:   gofakeit.UUID(),
-			Name: gofakeit.Name(),
-		}
+		u := g.generateUser()
+		users = append(users, u)
+	}
+}
 
-		userIds = append(userIds, user.Id)
-		users = append(users, user)
+func (g *Gen) generateUser() *User {
+	user := &User{
+		Id:   gofakeit.UUID(),
+		Name: gofakeit.Name(),
 	}
 
-	return users, userIds
+	return user
 }
 
 type Message struct {
-	Id         string `fake:"{ misc.uuid}"`
-	Text       string `fake:"{ string.letter }"`
+	Id         string    `fake:"{ misc.uuid}"`
+	Text       string 	 `fake:"{ string.letter }"`
 	CategoryId string
 	PostedAt   time.Time `fake:"{ date.date }"`
 	AuthorId   string
 }
 
-func generateMessages(userIds []string, categoryIds []string) []Message {
-	var messages []Message
-
+func (g *Gen) generateMessages() {
 	for i := 0; i < MESSAGES_COUNT; i++ {
-		message := Message{
-			Id:         gofakeit.UUID(),
-			Text:       gofakeit.ProgrammingLanguage(),
-			CategoryId: categoryIds[rand.Intn(len(categoryIds))],
-			PostedAt:   gofakeit.Date(),
-			AuthorId:   userIds[rand.Intn(len(userIds))],
-		}
-
-		messages = append(messages, message)
+		m := g.generateMessage()
+		messages = append(messages, m)
 	}
-
-	return messages
 }
 
-func Generate() ([]Category, []User, []Message) {
-	gofakeit.Seed(time.Now().UnixNano())
+func (g *Gen) generateMessage() *Message {
+	category := categories[rand.Intn(len(categories))]
+	author := users[rand.Intn(len(users))]
 
-	categories, categoryIds := generateCategories()
-	users, userIds := generateUsers()
-	messages := generateMessages(userIds, categoryIds)
+	message := &Message{
+		Id:         gofakeit.UUID(),
+		Text:       gofakeit.ProgrammingLanguage(),
+		CategoryId: category.Id,
+		PostedAt:   gofakeit.Date(),
+		AuthorId:   author.Id,
+	}
 
-	return categories, users, messages
+	return message
 }

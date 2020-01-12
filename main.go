@@ -9,34 +9,37 @@ import (
 )
 
 func main()  {
-	startGenerationTime := time.Now().Unix()
-
 	db, err := db2.InitDatabase()
 	errorHandler(err)
 	defer db.DB.Close()
 
+	log.Println("Successfully connected to database.\n")
+
 	err = db.CreateTablesQuery()
 	errorHandler(err)
 
-	categories, users, messages := gen.Generate()
+	startGenerationTime := time.Now().Unix()
+
+	g, err := gen.InitGenerator(db)
+	errorHandler(err)
+
+	g.Generate()
 
 	endGenerationTime := time.Now().Unix()
-
 	log.Printf("Generation data: %d seconds" , endGenerationTime - startGenerationTime)
 
 	startInsertingTime := time.Now().Unix()
 
-	err = db.InsertUsers(users)
+	err = g.InsertUsers()
 	errorHandler(err)
 
-	err = db.InsertCategories(categories)
+	err = g.InsertCategories()
 	errorHandler(err)
 
-	err = db.InsertMessages(messages)
+	err = g.InsertMessages()
 	errorHandler(err)
 
 	endInsertingTime := time.Now().Unix()
-
 	log.Printf("Inserting data: %d seconds", endInsertingTime - startInsertingTime)
 }
 
